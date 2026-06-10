@@ -1,0 +1,13 @@
+{
+    "description": "LinkedIn Wend Puzzle #1 — June 9, 2026",
+    "grid": [
+        ["W", ".", ".", ".", "."],
+        [".", ".", "W", ".", "."],
+        [".", ".", ".", ".", "W"],
+        [".", "W", ".", ".", "."],
+        [".", ".", ".", "W", "."]
+    ],
+    "word_lengths": [3, 4, 5, 6],
+    "known_solution": ["WIN", "HOLD"],
+    "notes": "Unknown remaining 2 words. Puzzle #1 was the tutorial debut."
+}
