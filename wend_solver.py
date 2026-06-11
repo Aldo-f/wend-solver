@@ -218,15 +218,15 @@ def solve_wend(puzzle: WendPuzzle, dictionary: List[str]) -> Optional[List[WordP
     """
     Solve a Wend puzzle given the grid and a dictionary.
 
-    Returns a list of 4 WordPath objects (3,4,5,6 letters) or None if unsolvable.
+    Returns a list of WordPath objects (one per word_length) or None if unsolvable.
     """
     trie = Trie(dictionary)
-    all_paths = enumerate_paths(puzzle, trie)
+    max_len = max(puzzle.word_lengths)
+    all_paths = enumerate_paths(puzzle, trie, max_len=max_len)
     grouped = group_by_length(all_paths)
 
-    print(f"Enumerated paths: 3={len(grouped.get(3, []))}, "
-          f"4={len(grouped.get(4, []))}, 5={len(grouped.get(5, []))}, "
-          f"6={len(grouped.get(6, []))}")
+    for l in sorted(grouped):
+        print(f"  {l}-letter: {len(grouped[l])} words")
 
     solution = solve_exact_cover(
         all_tiles=set(puzzle.all_tiles()),

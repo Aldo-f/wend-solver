@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Wend Solver</title>
+<style>
+  :root {
+    --bg: #0f0f1a;
+    --card: #1a1a2e;
+    --border: #2a2a4a;
+    --text: #e0e0ff;
+    --accent: #6c63ff;
+    --success: #4caf50;
+    --error: #ff5252;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 2rem 1rem;
+  }
+  h1 {
+    font-size: 2.5rem;
+    font-weight: 800;
+    background: linear-gradient(135deg, var(--accent), #e040fb);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin-bottom: 0.5rem;
+  }
+  .subtitle { color: #8888aa; margin-bottom: 2rem; font-size: 0.9rem; text-align: center; }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 2rem;
+    width: 100%;
+    max-width: 700px;
+    margin-bottom: 1rem;
+  }
+  .upload-area {
+    border: 2px dashed var(--border);
+    border-radius: 12px;
+    padding: 2rem;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s;
+    position: relative;
+  }
+  .upload-area:hover, .upload-area.dragover { border-color: var(--accent); background: rgba(108,99,255,0.05); }
+  .upload-area.has-image { border-color: var(--success); padding: 1rem; }
+  .upload-icon { font-size: 2.5rem; margin-bottom: 0.5rem; opacity: 0.5; }
+  .upload-area p { color: #8888aa; font-size: 0.85rem; }
+  .upload-area input[type="file"] { display: none; }
+  .preview-container { display: none; }
+  .preview-container.show { display: block; }
+  .preview-container img { max-width: 100%; max-height: 200px; border-radius: 8px; display: block; margin: 0 auto; }
+  .btn { padding: 0.8rem 2rem; border: none; border-radius: 10px; font-size: 1rem; font-weight: 600; cursor: pointer; transition: all 0.3s; }
+  .btn-primary { background: linear-gradient(135deg, var(--accent), #e040fb); color: white; width: 100%; }
+  .btn-primary:hover { opacity: 0.9; transform: translateY(-1px); }
+  .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+  .btn-secondary { background: var(--border); color: var(--text); }
+  .btn-secondary:hover { background: #3a3a5a; }
+  .controls { display: flex; gap: 0.5rem; margin-top: 1rem; }
+  .controls .btn { flex: 1; }
+  .grid-editor {
+    display: inline-grid;
+    gap: 4px;
+    margin: 1rem auto;
+    justify-content: center;
+  }
+  .grid-editor input {
+    width: 56px; height: 56px;
+    text-align: center;
+    font-size: 1.5rem;
+    font-weight: 700;
+    font-family: 'Courier New', monospace;
+    border: 2px solid var(--border);
+    border-radius: 6px;
+    background: #16213e;
+    color: var(--text);
+    text-transform: uppercase;
+    transition: all 0.2s;
+    padding: 0;
+  }
+  .grid-editor input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 2px rgba(108,99,255,0.3); }
+  .grid-editor input.wall { background: #2a2a3e; color: #555; }
+  .size-select {
+    display: flex; gap: 0.5rem; align-items: center; justify-content: center;
+    margin-bottom: 1rem;
+  }
+  .size-select label { font-size: 0.85rem; color: #8888aa; }
+  .size-select select {
+    background: #12122a; border: 1px solid var(--border); border-radius: 6px;
+    color: var(--text); padding: 0.3rem 0.6rem; font-size: 0.9rem;
+  }
+  .lengths-input {
+    display: flex; gap: 0.5rem; align-items: center; justify-content: center;
+    margin: 1rem 0; font-size: 0.85rem; color: #8888aa;
+  }
+  .lengths-input input {
+    width: 120px; padding: 0.4rem; background: #12122a;
+    border: 1px solid var(--border); border-radius: 6px; color: var(--text); text-align: center;
+    font-family: 'Courier New', monospace;
+  }
+  .spinner {
+    display: inline-block; width: 20px; height: 20px;
+    border: 3px solid rgba(255,255,255,0.3); border-top-color: white;
+    border-radius: 50%; animation: spin 0.8s linear infinite;
+    vertical-align: middle; margin-right: 0.5rem;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .result-card { display: none; }
+  .result-card.show { display: block; }
+  .result-card.error { border-color: var(--error); background: rgba(255,82,82,0.05); }
+  .result-card.success { border-color: var(--success); background: rgba(76,175,80,0.05); }
+  .grid-display {
+    display: inline-grid; gap: 4px;
+    margin: 1.5rem auto; justify-content: center;
+  }
+  .grid-cell {
+    width: 48px; height: 48px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.3rem; font-weight: 700; border-radius: 6px;
+    background: #16213e; border: 2px solid transparent;
+    transition: border-color 0.3s, background 0.3s;
+  }
+  .grid-cell.wall { background: #2a2a3e; color: transparent; border-color: #3a3a5a; }
+  .grid-cell.wall::after { content: '▨'; color: #3a3a5a; font-size: 1rem; }
+  .grid-cell.path-color-0 { border-color: #ff6b6b; background: rgba(255,107,107,0.12); }
+  .grid-cell.path-color-1 { border-color: #4ecdc4; background: rgba(78,205,196,0.12); }
+  .grid-cell.path-color-2 { border-color: #ffe66d; background: rgba(255,230,109,0.12); }
+  .grid-cell.path-color-3 { border-color: #a29bfe; background: rgba(162,155,254,0.12); }
+  .grid-cell.path-color-4 { border-color: #ff9ff3; background: rgba(255,159,243,0.12); }
+  .grid-cell.path-color-5 { border-color: #feca57; background: rgba(254,202,87,0.12); }
+  .grid-cell.path-color-6 { border-color: #48dbfb; background: rgba(72,219,251,0.12); }
+  .grid-cell.path-color-7 { border-color: #ff6348; background: rgba(255,99,72,0.12); }
+  .solution-words { display: flex; flex-direction: column; gap: 0.5rem; margin: 1rem 0; }
+  .solution-word {
+    display: flex; align-items: center; gap: 0.8rem;
+    padding: 0.6rem 1rem; border-radius: 8px; background: rgba(255,255,255,0.03);
+  }
+  .solution-color { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; }
+  .color-0 { background: #ff6b6b; } .color-1 { background: #4ecdc4; }
+  .color-2 { background: #ffe66d; } .color-3 { background: #a29bfe; }
+  .color-4 { background: #ff9ff3; } .color-5 { background: #feca57; }
+  .color-6 { background: #48dbfb; } .color-7 { background: #ff6348; }
+  .solution-word .word { font-weight: 700; font-size: 1.1rem; }
+  .solution-word .length { color: #8888aa; font-size: 0.85rem; }
+  .solution-word .path-info { color: #666; font-size: 0.8rem; margin-left: auto; }
+  .error-text { color: var(--error); margin-top: 1rem; text-align: center; }
+  .clear-btn {
+    position: absolute; top: -8px; right: -8px;
+    width: 28px; height: 28px; border-radius: 50%;
+    border: 2px solid var(--border); background: var(--card);
+    color: #888; display: none; align-items: center; justify-content: center;
+    cursor: pointer; font-size: 1rem;
+  }
+  .clear-btn.show { display: flex; }
+  .input-method { display: flex; gap: 0.5rem; margin-bottom: 1rem; }
+  .input-method label {
+    flex: 1; text-align: center; padding: 0.5rem;
+    border-radius: 8px; border: 1px solid var(--border);
+    cursor: pointer; font-size: 0.9rem; color: #8888aa;
+    transition: all 0.2s;
+  }
+  .input-method label:hover { border-color: var(--accent); }
+  .input-method input:checked + label { background: var(--accent); color: white; border-color: var(--accent); }
+  .input-method input { display: none; }
+  .method-content { display: none; }
+  .method-content.active { display: block; }
+  .edit-hint { text-align: center; color: #8888aa; font-size: 0.85rem; margin-bottom: 1rem; }
+  .footer { color: #555; font-size: 0.8rem; text-align: center; margin-top: 2rem; }
+  .editor-wrapper { text-align: center; }
+</style>
+</head>
+<body>
+  <h1>🧩 Wend Solver</h1>
+  <p class="subtitle">
+    Upload a screenshot → auto-detect grid → review/correct → get solution
+  </p>
+
+  <div class="card">
+    <div class="input-method">
+      <input type="radio" name="method" value="upload" id="m-upload" checked>
+      <label for="m-upload">📸 Upload / Paste</label>
+      <input type="radio" name="method" value="manual" id="m-manual">
+      <label for="m-manual">⌨️ Type Grid</label>
+    </div>
+
+    <!-- Upload method -->
+    <div class="method-content active" id="method-upload">
+      <div class="upload-area" id="dropZone">
+        <button class="clear-btn" id="clearBtn">✕</button>
+        <div id="uploadPlaceholder">
+          <div class="upload-icon">📷</div>
+          <p><strong>Click</strong> or <strong>Ctrl+V</strong> to paste screenshot</p>
+        </div>
+        <div class="preview-container" id="previewContainer">
+          <img id="previewImg" alt="Preview">
+        </div>
+        <input type="file" id="fileInput" accept="image/*">
+      </div>
+      <div class="controls">
+        <button class="btn btn-primary" id="detectBtn" disabled>
+          🔍 Detect Grid
+        </button>
+      </div>
+    </div>
+
+    <!-- Manual method -->
+    <div class="method-content" id="method-manual">
+      <div class="size-select">
+        <label>Grid size:</label>
+        <select id="gridSizeSelect">
+          <option value="4">4×4</option>
+          <option value="5" selected>5×5</option>
+          <option value="6">6×6</option>
+          <option value="7">7×7</option>
+          <option value="8">8×8</option>
+        </select>
+        <button class="btn btn-secondary" onclick="initManual()" style="padding:0.3rem 1rem;font-size:0.85rem">Create</button>
+      </div>
+    </div>
+
+    <!-- Grid Editor -->
+    <div id="editorSection" style="display:none">
+      <div class="edit-hint">
+        Type letters. Use <code>#</code> for walls. Tab/arrows navigate.
+      </div>
+      <div class="editor-wrapper">
+        <div class="grid-editor" id="gridEditor"></div>
+      </div>
+
+      <div class="lengths-input">
+        <span>Word lengths:</span>
+        <input type="text" id="lengthsInput" value="3,4,5,7" placeholder="3,4,5,7">
+      </div>
+
+      <div class="controls">
+        <button class="btn btn-primary" id="solveBtn">🧠 Solve</button>
+      </div>
+    </div>
+
+    <div class="card result-card" id="resultCard">
+      <div id="resultContent"></div>
+    </div>
+  </div>
+
+  <div class="footer">
+    Wend Solver &middot; <code>~/.hermes/scripts/wend/</code> &middot;
+    <a href="https://github.com/Aldo-f/wend-solver" style="color:#6c63ff">GitHub</a>
+  </div>
+
+<script>
+// ─── State ───
+let currentFile = null;
+let gridSize = 5; // detected or selected
+
+function makeEmptyGrid(n) {
+  return Array.from({length: n}, () => Array(n).fill('.'));
+}
+let currentGrid = makeEmptyGrid(5);
+
+// ─── Method switching ───
+document.querySelectorAll('input[name="method"]').forEach(radio => {
+  radio.addEventListener('change', () => {
+    document.querySelectorAll('.method-content').forEach(el => el.classList.remove('active'));
+    document.getElementById('method-' + radio.value).classList.add('active');
+    document.getElementById('resultCard').classList.remove('show');
+    if (radio.value === 'manual') {
+      // Don't auto-show editor; user must click Create
+    } else if (!currentFile) {
+      document.getElementById('editorSection').style.display = 'none';
+    }
+  });
+});
+
+function initManual() {
+  const n = parseInt(document.getElementById('gridSizeSelect').value);
+  gridSize = n;
+  currentGrid = makeEmptyGrid(n);
+  document.getElementById('editorSection').style.display = 'block';
+  renderEditor();
+  document.getElementById('resultCard').classList.remove('show');
+}
+
+// ─── Upload area ───
+const dropZone = document.getElementById('dropZone');
+const fileInput = document.getElementById('fileInput');
+const previewImg = document.getElementById('previewImg');
+const previewContainer = document.getElementById('previewContainer');
+const uploadPlaceholder = document.getElementById('uploadPlaceholder');
+const clearBtn = document.getElementById('clearBtn');
+const detectBtn = document.getElementById('detectBtn');
+
+dropZone.addEventListener('click', () => fileInput.click());
+fileInput.addEventListener('change', (e) => { if (e.target.files.length) handleFile(e.target.files[0]); });
+dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('dragover'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+dropZone.addEventListener('drop', (e) => {
+  e.preventDefault(); dropZone.classList.remove('dragover');
+  if (e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]);
+});
+document.addEventListener('paste', (e) => {
+  for (const item of e.clipboardData.items) {
+    if (item.type.startsWith('image/')) {
+      handleFile(item.getAsFile());
+      document.getElementById('m-upload').checked = true;
+      document.getElementById('m-upload').dispatchEvent(new Event('change'));
+      break;
+    }
+  }
+});
+
+function handleFile(file) {
+  currentFile = file;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    previewImg.src = e.target.result;
+    previewContainer.classList.add('show');
+    uploadPlaceholder.style.display = 'none';
+    clearBtn.classList.add('show');
+    dropZone.classList.add('has-image');
+    detectBtn.disabled = false;
+    document.getElementById('editorSection').style.display = 'none';
+  };
+  reader.readAsDataURL(file);
+}
+
+clearBtn.addEventListener('click', (e) => {
+  e.stopPropagation();
+  currentFile = null; fileInput.value = ''; previewImg.src = '';
+  previewContainer.classList.remove('show');
+  uploadPlaceholder.style.display = 'block';
+  clearBtn.classList.remove('show');
+  dropZone.classList.remove('has-image');
+  detectBtn.disabled = true;
+  document.getElementById('editorSection').style.display = 'none';
+  document.getElementById('resultCard').classList.remove('show');
+});
+
+// ─── Detect Grid (API) ───
+detectBtn.addEventListener('click', async () => {
+  if (!currentFile) return;
+  detectBtn.disabled = true; detectBtn.innerHTML = '<span class="spinner"></span> Detecting...';
+  const formData = new FormData();
+  formData.append('image', currentFile);
+  try {
+    const resp = await fetch('/api/detect', { method: 'POST', body: formData });
+    const data = await resp.json();
+    if (data.success && data.grid) {
+      gridSize = data.size || data.grid.length;
+      currentGrid = data.grid.map(row => row.map(c => c === 'W' ? 'W' : c === '.' || c === '?' ? '.' : c));
+      // Fill any rows that might have different lengths
+      currentGrid = currentGrid.map(row => {
+        while (row.length < gridSize) row.push('.');
+        return row;
+      });
+      renderEditor();
+      document.getElementById('editorSection').style.display = 'block';
+      document.getElementById('resultCard').classList.remove('show');
+    } else {
+      showError(data.error || 'Detection failed');
+    }
+  } catch (err) { showError(err.message); }
+  detectBtn.disabled = false; detectBtn.textContent = '🔍 Detect Grid';
+});
+
+// ─── Grid Editor ───
+function renderEditor() {
+  const container = document.getElementById('gridEditor');
+  const n = gridSize;
+  container.style.gridTemplateColumns = `repeat(${n}, 56px)`;
+  container.innerHTML = '';
+
+  for (let r = 0; r < n; r++) {
+    for (let c = 0; c < n; c++) {
+      const val = currentGrid[r][c];
+      const input = document.createElement('input');
+      input.maxLength = 1;
+      input.dataset.row = r; input.dataset.col = c;
+
+      if (val === 'W') { input.value = '#'; input.classList.add('wall'); }
+      else if (val === '.' || val === '?') input.value = '';
+      else input.value = val;
+
+      input.addEventListener('input', () => {
+        let v = input.value.toUpperCase();
+        if (v === '#') {
+          currentGrid[r][c] = 'W'; input.classList.add('wall');
+        } else if (v >= 'A' && v <= 'Z') {
+          currentGrid[r][c] = v; input.classList.remove('wall'); input.value = v;
+          const next = getNextCell(r, c);
+          if (next) document.querySelector(`input[data-row="${next.r}"][data-col="${next.c}"]`).focus();
+        } else {
+          currentGrid[r][c] = '.'; input.classList.remove('wall'); input.value = '';
+        }
+      });
+
+      input.addEventListener('keydown', (e) => {
+        const dirs = { 'ArrowRight': [0,1], 'ArrowLeft': [0,-1], 'ArrowDown': [1,0], 'ArrowUp': [-1,0] };
+        if (e.key in dirs) {
+          e.preventDefault();
+          const [dr, dc] = dirs[e.key];
+          const nr = r + dr, nc = c + dc;
+          if (nr >= 0 && nr < n && nc >= 0 && nc < n)
+            document.querySelector(`input[data-row="${nr}"][data-col="${nc}"]`).focus();
+        }
+        if (e.key === 'Tab') {
+          e.preventDefault();
+          const cells = document.querySelectorAll('#gridEditor input');
+          const idx = Array.from(cells).indexOf(input);
+          const next = (idx + (e.shiftKey ? -1 : 1) + cells.length) % cells.length;
+          cells[next].focus();
+        }
+      });
+      container.appendChild(input);
+    }
+  }
+}
+
+function getNextCell(r, c) {
+  const n = gridSize;
+  for (let nc = c + 1; nc < n; nc++) if (currentGrid[r][nc] === '.' || (currentGrid[r][nc] >= 'A' && currentGrid[r][nc] <= 'Z')) return {r, c: nc};
+  for (let nr = r + 1; nr < n; nr++)
+    for (let nc = 0; nc < n; nc++)
+      if (currentGrid[nr][nc] === '.' || (currentGrid[nr][nc] >= 'A' && currentGrid[nr][nc] <= 'Z')) return {r: nr, c: nc};
+  return null;
+}
+
+// ─── Solve ───
+document.getElementById('solveBtn').addEventListener('click', async () => {
+  const n = gridSize;
+  const inputs = document.querySelectorAll('#gridEditor input');
+  inputs.forEach(inp => {
+    const r = parseInt(inp.dataset.row), c = parseInt(inp.dataset.col);
+    const v = inp.value.toUpperCase();
+    if (v === '#') currentGrid[r][c] = 'W';
+    else if (v >= 'A' && v <= 'Z') currentGrid[r][c] = v;
+    else currentGrid[r][c] = '.';
+  });
+
+  const gridStr = currentGrid.map(row => row.map(c => c === 'W' ? '#' : (c === '.' ? '.' : c)).join('')).join('/');
+  const lengths = document.getElementById('lengthsInput').value;
+
+  const btn = document.getElementById('solveBtn');
+  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> Solving...';
+  try {
+    const resp = await fetch('/api/solve', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ grid: gridStr, lengths: lengths.split(',').map(Number) })
+    });
+    showResult(await resp.json());
+  } catch (err) { showResult({ success: false, error: err.message }); }
+  btn.disabled = false; btn.textContent = '🧠 Solve';
+});
+
+// ─── Result display ───
+function showResult(data) {
+  const card = document.getElementById('resultCard');
+  const content = document.getElementById('resultContent');
+  card.classList.add('show'); card.classList.remove('success', 'error');
+  if (!data.success) {
+    card.classList.add('error');
+    let html = '<div class="error-text">❌ ' + data.error + '</div>';
+    if (data.grid) html += '<p style="text-align:center;margin-top:1rem;font-size:0.85rem;color:#888">Grid used:</p>' + renderGrid(data.grid, null);
+    content.innerHTML = html; return;
+  }
+  card.classList.add('success');
+  const solution = data.solution;
+  const grid = data.grid;
+  const cellToColorIdx = {};
+  solution.forEach((w, idx) => { w.path.forEach(p => { cellToColorIdx[p[0] + ',' + p[1]] = idx; }); });
+  let html = '<h3 style="text-align:center;margin-bottom:0.5rem">✅ Solution Found</h3>';
+  html += renderGrid(grid, cellToColorIdx);
+  html += '<div class="solution-words">';
+  solution.forEach((w, idx) => {
+    html += `<div class="solution-word"><div class="solution-color color-${idx}"></div><span class="word">${w.word}</span><span class="length">(${w.length})</span><span class="path-info">${w.path.length} tiles</span></div>`;
+  });
+  html += '</div>';
+  content.innerHTML = html;
+}
+
+function renderGrid(grid, colors) {
+  const n = grid.length;
+  let html = `<div class="grid-display" style="grid-template-columns: repeat(${n}, 48px)">`;
+  for (let r = 0; r < n; r++) {
+    for (let c = 0; c < n; c++) {
+      const val = grid[r][c];
+      let cls = 'grid-cell';
+      if (val === 'W' || val === '#') cls += ' wall';
+      else {
+        cls += ' letter';
+        if (colors) { const key = r + ',' + c; if (key in colors) cls += ' path-color-' + colors[key]; }
+      }
+      html += `<div class="${cls}">${val === 'W' || val === '#' ? '' : val}</div>`;
+    }
+  }
+  html += '</div>'; return html;
+}
+
+function showError(msg) {
+  const card = document.getElementById('resultCard');
+  const content = document.getElementById('resultContent');
+  card.classList.add('show', 'error');
+  content.innerHTML = `<div class="error-text">❌ ${msg}</div>`;
+}
+</script>
+</body>
+</html>
