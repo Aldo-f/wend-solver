@@ -1,0 +1,14 @@
+[Unit]
+Description=Wend Solver — LinkedIn puzzle solver web app
+After=network.target
+
+[Service]
+Type=simple
+User=aldo
+WorkingDirectory=/home/aldo/.hermes/scripts/wend
+ExecStart=/home/aldo/.hermes/scripts/wend-venv/bin/python app.py
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

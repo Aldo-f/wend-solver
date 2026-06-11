@@ -9,38 +9,36 @@ An educational solver for [LinkedIn Wend](https://www.linkedin.com/games/wend) p
 - **🖼️ Screenshot upload** — upload a LinkedIn Wend screenshot, walls are auto-detected, you fill in the letters
 - **⌨️ Manual input** — type the grid directly (4×4 up to 8×8, any size supported)
 - **🧠 Algorithm X solver** — exact cover backtracking with dictionary trie for fast lookup
-- **🌐 Web UI** at `http://192.168.0.5:3232/`
+- **🌐 Web UI** at `http://localhost:3232/`
 - **📐 Dynamic grid sizes** — not limited to 5×5; works with any N×N Wend variant
+- **🧪 Tested** — 36 unit tests, pre-commit hook, GitHub Actions CI
 
 ## Quick Start
 
-### Prerequisites
-
-- Python 3.11+
-- [uv](https://github.com/astral-sh/uv) (fast Python package manager)
-- Tesseract OCR (for optional letter OCR — walls detection works without it)
-
 ```bash
-# Install system deps
-sudo apt-get install -y tesseract-ocr
+# Clone
+git clone https://github.com/Aldo-f/wend-solver.git
+cd wend-solver
 
-# Create venv & install Python deps
-uv venv ~/.hermes/scripts/wend-venv --seed
-source ~/.hermes/scripts/wend-venv/bin/activate
-uv pip install pytesseract flask Pillow
-```
+# Set up virtual environment
+python3 -m venv .venv
+source .venv/bin/activate
 
-### Run
+# Install dependencies
+pip install flask Pillow pytesseract pytest
 
-```bash
-cd ~/.hermes/scripts/wend
-source ~/.hermes/scripts/wend-venv/bin/activate
+# (Optional) Install Tesseract OCR for screenshot upload
+#   macOS: brew install tesseract
+#   Ubuntu/Debian: sudo apt-get install tesseract-ocr
+#   Fedora: sudo dnf install tesseract
+
+# Run
 python app.py
 ```
 
-Open `http://192.168.0.5:3232/` in your browser.
+Open **http://localhost:3232/** in your browser.
 
-### Run as a service (auto-start after reboot)
+### Run as a service (systemd — Linux)
 
 ```bash
 sudo cp wend-solver.service /etc/systemd/system/
@@ -48,7 +46,29 @@ sudo systemctl enable wend-solver
 sudo systemctl start wend-solver
 ```
 
-Now the solver starts automatically on every boot.
+Edit the service file first if your paths differ from the defaults.
+
+## Project Structure
+
+```
+wend-solver/
+├── app.py                 # Flask web app (routes, solver wrapper)
+├── grid_detect.py         # N×N grid detection from images
+├── wend_solver.py         # Core solver (trie, path enumeration, exact cover)
+├── templates/
+│   └── index.html         # Web UI
+├── tests/
+│   ├── conftest.py        # Shared fixtures & test dictionary
+│   └── test_wend_solver.py # 36 unit tests
+├── hooks/
+│   └── pre-commit         # Pre-commit hook (runs pytest, blocks on failure)
+├── .github/workflows/
+│   └── test.yml           # GitHub Actions CI (push & PR)
+├── wend-solver.service    # systemd unit for auto-start on boot
+├── wend-strategy-guide.md # Strategy guide for playing Wend
+├── README.md              # This file
+└── .gitignore
+```
 
 ## How It Works
 
@@ -58,13 +78,31 @@ Now the solver starts automatically on every boot.
 
 3. **Exact cover** — The solver implements **Algorithm X** (backtracking with constraint propagation). It finds a set of paths (one per target word length) that covers every tile exactly once.
 
+## Running the Tests
+
+```bash
+# All tests
+python -m pytest tests/ -v
+
+# Just solver tests (fast, no extra deps)
+python -m pytest tests/test_wend_solver.py -v
+```
+
+### Pre-commit hook (auto-run on every commit)
+
+```bash
+git config core.hooksPath hooks
+```
+
+Now `pytest` runs automatically before every `git commit`. If tests fail, the commit is blocked.
+
 ## API
 
 ### `POST /api/solve`
 
 **JSON grid string:**
 ```bash
-curl -X POST http://192.168.0.5:3232/api/solve \
+curl -X POST http://localhost:3232/api/solve \
   -H "Content-Type: application/json" \
   -d '{"grid":"RCOHI/A#D#G/B#E#H/C#F#I/HIEYV","lengths":"3,4,5,7"}'
 ```
@@ -75,7 +113,7 @@ curl -X POST http://192.168.0.5:3232/api/solve \
 
 **File upload:**
 ```bash
-curl -X POST http://192.168.0.5:3232/api/solve \
+curl -X POST http://localhost:3232/api/solve \
   -F "image=@screenshot.png"
 ```
 
@@ -84,7 +122,7 @@ curl -X POST http://192.168.0.5:3232/api/solve \
 Upload an image to detect walls only (no OCR — you fill letters in the UI):
 
 ```bash
-curl -X POST http://192.168.0.5:3232/api/detect \
+curl -X POST http://localhost:3232/api/detect \
   -F "image=@screenshot.png"
 ```
 
@@ -93,23 +131,10 @@ Returns `{"success": true, "grid": [...], "walls": [...], "size": 6}`.
 ### `GET /api/health`
 
 ```bash
-curl http://192.168.0.5:3232/api/health
+curl http://localhost:3232/api/health
 ```
 ```json
 {"status": "ok", "dict_loaded": true, "dict_size": 75213}
-```
-
-## Project Structure
-
-```
-~/.hermes/scripts/wend/
-├── app.py              # Flask web app (routes, solver wrapper)
-├── grid_detect.py      # N×N grid detection from images
-├── wend_solver.py      # Core solver (trie, path enumeration, exact cover)
-├── templates/
-│   └── index.html      # Web UI
-├── wend-solver.service # systemd service file
-└── README.md           # This file
 ```
 
 ## Solver Variants
@@ -135,5 +160,5 @@ MIT — educational use only.
 ## Resources
 
 - [LinkedIn Wend](https://www.linkedin.com/games/wend)
-- [Wend Strategy Guide](wend-strategy-guide.md) (local)
+- [Wend Strategy Guide](wend-strategy-guide.md)
 - [Dictionary source](https://github.com/words/an-array-of-english-words)

@@ -14,8 +14,8 @@ import pytesseract
 from flask import Flask, request, jsonify, send_file
 from PIL import Image, ImageEnhance, ImageFilter
 
-# Add solver directory to path
-sys.path.insert(0, str(Path.home() / ".hermes" / "scripts" / "wend"))
+# Add solver directory to path (same dir as this file)
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from wend_solver import WendPuzzle, solve_wend
 from grid_detect import detect_grid as detect_grid_fn, find_grid_lines
 

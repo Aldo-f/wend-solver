@@ -11,9 +11,16 @@ echo "🧪 Running pre-commit tests..."
 PROJECT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$PROJECT_DIR"
 
-# Activate venv if it exists
-if [ -f "$HOME/.hermes/scripts/wend-venv/bin/activate" ]; then
+# Activate venv — try local .venv first, then fall back to user's wend-venv
+if [ -f ".venv/bin/activate" ]; then
+    source ".venv/bin/activate"
+elif [ -f "venv/bin/activate" ]; then
+    source "venv/bin/activate"
+elif [ -f "$HOME/.hermes/scripts/wend-venv/bin/activate" ]; then
     source "$HOME/.hermes/scripts/wend-venv/bin/activate"
+else
+    # No venv found — ensure pytest is installed globally or in user site
+    echo "ℹ️  No virtual environment found. Using system Python."
 fi
 
 # Ensure pytest is available
