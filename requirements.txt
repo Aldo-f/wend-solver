@@ -1,2 +1,6 @@
 flask>=3.0
 Pillow>=10.0
+
+# E2E tests (optional - install with: pip install -r requirements-e2e.txt)
+# playwright>=1.40
+# pytest-playwright>=0.4
