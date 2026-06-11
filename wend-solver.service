@@ -4,9 +4,9 @@ After=network.target
 
 [Service]
 Type=simple
-User=aldo
-WorkingDirectory=/home/aldo/.hermes/scripts/wend
-ExecStart=/home/aldo/.hermes/scripts/wend-venv/bin/python app.py
+User=CHANGE_ME
+WorkingDirectory=/path/to/wend-solver
+ExecStart=/path/to/wend-solver/.venv/bin/python app.py
 Restart=on-failure
 RestartSec=5
 
