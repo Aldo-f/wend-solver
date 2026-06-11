@@ -1,0 +1,38 @@
+#!/bin/bash
+# Pre-commit hook — run tests before allowing a commit.
+# Exit non-zero = block the commit.
+#
+# Install:  git config core.hooksPath hooks
+
+set -e
+
+echo "🧪 Running pre-commit tests..."
+
+PROJECT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+cd "$PROJECT_DIR"
+
+# Activate venv if it exists
+if [ -f "$HOME/.hermes/scripts/wend-venv/bin/activate" ]; then
+    source "$HOME/.hermes/scripts/wend-venv/bin/activate"
+fi
+
+# Ensure pytest is available
+if ! python3 -c "import pytest" 2>/dev/null; then
+    echo "📦 Installing pytest..."
+    pip install -q pytest
+fi
+
+# Run solver core tests
+echo "━━━ Running solver tests ━━━"
+python3 -m pytest tests/test_wend_solver.py -v --tb=short
+EXIT_CODE=$?
+
+if [ $EXIT_CODE -ne 0 ]; then
+    echo ""
+    echo "❌ Tests FAILED — commit blocked."
+    echo "   Fix the failures above, then commit again."
+    exit 1
+fi
+
+echo "✅ All tests passed."
+exit 0
