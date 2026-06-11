@@ -10,9 +10,8 @@ import threading
 import time
 from pathlib import Path
 
-import pytesseract
 from flask import Flask, request, jsonify, send_file
-from PIL import Image, ImageEnhance, ImageFilter
+from PIL import Image
 
 # Add solver directory to path (same dir as this file)
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -347,6 +346,6 @@ def solve():
 # -------------------------------------------------------------------
 
 if __name__ == '__main__':
-    print("Wend Solver POC — http://192.168.0.5:3232")
+    print("Wend Solver — http://localhost:3232")
     print("Dictionary loading in background...")
     app.run(host='0.0.0.0', port=3232, debug=False)

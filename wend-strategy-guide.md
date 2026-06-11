@@ -167,7 +167,7 @@ W . . . .
 ## Files in This Project
 
 ```
-/home/aldo/
+wend-solver/
 ├── wend-strategy-guide.md    # This file
 ├── wend_solver.py            # Python solver implementation
 └── test_puzzle_1.json        # Puzzle #1 test case

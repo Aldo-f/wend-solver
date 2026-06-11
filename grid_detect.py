@@ -1,7 +1,7 @@
 """Grid detection for Wend screenshots — supports N×N grids."""
 
-import pytesseract
-from PIL import Image, ImageEnhance
+from PIL import Image
+
 
 MIN_CELL_SIZE = 20
 MAX_CELL_SIZE = 150
@@ -160,6 +160,10 @@ def find_grid_lines(image):
 def ocr_letter(cell_img):
     """OCR a single uppercase letter from a cropped cell image."""
     try:
+        # Lazy imports — Tesseract is optional
+        from PIL import ImageEnhance
+        import pytesseract
+
         img = cell_img.convert("L")
         img = ImageEnhance.Contrast(img).enhance(3.0)
         img = img.point(lambda x: 0 if x < 120 else 255, "1")

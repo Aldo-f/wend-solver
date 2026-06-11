@@ -6,14 +6,17 @@ An educational solver for [LinkedIn Wend](https://www.linkedin.com/games/wend) p
 
 ## Features
 
-- **🖼️ Screenshot upload** — upload a LinkedIn Wend screenshot, walls are auto-detected, you fill in the letters
-- **⌨️ Manual input** — type the grid directly (4×4 up to 8×8, any size supported)
-- **🧠 Algorithm X solver** — exact cover backtracking with dictionary trie for fast lookup
-- **🌐 Web UI** at `http://localhost:3232/`
-- **📐 Dynamic grid sizes** — not limited to 5×5; works with any N×N Wend variant
-- **🧪 Tested** — 36 unit tests, pre-commit hook, GitHub Actions CI
+- **🖼️ Screenshot upload** — upload a Wend screenshot, walls auto-detected, you fill the letters
+- **⌨️ Manual input** — type the grid directly (4×4 up to 8×8, any size)
+- **🧠 Algorithm X solver** — exact cover backtracking with dictionary trie
+- **🌐 Web UI** — open `http://localhost:3232/`
+- **📐 Dynamic grid sizes** — works with any N×N grid
+- **🧪 36 unit tests** + pre-commit hook + GitHub Actions CI
+- **🐍 Pure Python** — Flask + Pillow only. Tesseract/OCR is optional.
 
 ## Quick Start
+
+### Linux / macOS
 
 ```bash
 # Clone
@@ -25,28 +28,54 @@ python3 -m venv .venv
 source .venv/bin/activate
 
 # Install dependencies
-pip install flask Pillow pytesseract pytest
-
-# (Optional) Install Tesseract OCR for screenshot upload
-#   macOS: brew install tesseract
-#   Ubuntu/Debian: sudo apt-get install tesseract-ocr
-#   Fedora: sudo dnf install tesseract
+pip install -r requirements.txt
 
 # Run
 python app.py
 ```
 
+### Windows (PowerShell)
+
+```powershell
+# Clone
+git clone https://github.com/Aldo-f/wend-solver.git
+cd wend-solver
+
+# Set up virtual environment
+python -m venv .venv
+.venv\Scripts\Activate.ps1
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Run
+python app.py
+```
+
+*Or use `cmd`: `.venv\Scripts\activate.bat` instead of the PowerShell line.*
+
 Open **http://localhost:3232/** in your browser.
 
-### Run as a service (systemd — Linux)
+### Optional: Tesseract OCR (for automatic letter recognition from screenshots)
+
+The app works **without Tesseract** — walls are auto-detected, you type letters in the UI.
+Only install this if you want OCR to guess the letters:
+
+- **macOS**: `brew install tesseract`
+- **Ubuntu/Debian**: `sudo apt-get install tesseract-ocr`
+- **Windows**: Download from [GitHub UB-Mannheim/tesseract](https://github.com/UB-Mannheim/tesseract/wiki)
+- **Fedora**: `sudo dnf install tesseract`
+- Then: `pip install pytesseract`
+
+### Run as a service (Linux systemd)
 
 ```bash
-sudo cp wend-solver.service /etc/systemd/system/
+cp _examples/wend-solver.service /tmp/
+# Edit /tmp/wend-solver.service with correct paths + user
+sudo cp /tmp/wend-solver.service /etc/systemd/system/
 sudo systemctl enable wend-solver
 sudo systemctl start wend-solver
 ```
-
-Edit the service file first if your paths differ from the defaults.
 
 ## Project Structure
 
@@ -55,16 +84,19 @@ wend-solver/
 ├── app.py                 # Flask web app (routes, solver wrapper)
 ├── grid_detect.py         # N×N grid detection from images
 ├── wend_solver.py         # Core solver (trie, path enumeration, exact cover)
+├── requirements.txt       # Python dependencies
 ├── templates/
 │   └── index.html         # Web UI
 ├── tests/
 │   ├── conftest.py        # Shared fixtures & test dictionary
 │   └── test_wend_solver.py # 36 unit tests
 ├── hooks/
-│   └── pre-commit         # Pre-commit hook (runs pytest, blocks on failure)
+│   ├── pre-commit         # Pre-commit hook (bash — Linux/macOS)
+│   └── pre-commit.ps1     # Pre-commit hook (PowerShell — Windows)
+├── _examples/
+│   └── wend-solver.service # systemd unit template (Linux)
 ├── .github/workflows/
 │   └── test.yml           # GitHub Actions CI (push & PR)
-├── wend-solver.service    # systemd unit for auto-start on boot
 ├── wend-strategy-guide.md # Strategy guide for playing Wend
 ├── README.md              # This file
 └── .gitignore
@@ -81,10 +113,13 @@ wend-solver/
 ## Running the Tests
 
 ```bash
+# Install test dependency
+pip install pytest
+
 # All tests
 python -m pytest tests/ -v
 
-# Just solver tests (fast, no extra deps)
+# Just solver core tests (fast)
 python -m pytest tests/test_wend_solver.py -v
 ```
 
@@ -94,7 +129,7 @@ python -m pytest tests/test_wend_solver.py -v
 git config core.hooksPath hooks
 ```
 
-Now `pytest` runs automatically before every `git commit`. If tests fail, the commit is blocked.
+On **Windows**: Git for Windows runs `hooks/pre-commit` if you use Git Bash, or you can manually run `hooks/pre-commit.ps1` in PowerShell.
 
 ## API
 
@@ -108,8 +143,8 @@ curl -X POST http://localhost:3232/api/solve \
 ```
 
 **Parameters:**
-- `grid` — rows separated by `/`, cells separated by position. `#` = wall, `.` = empty, letter = that letter.
-- `lengths` — comma-separated word lengths to find, e.g. `"3,4,5,7"` or `[3,4,5,7]`
+- `grid` — rows separated by `/`. `#` = wall, `.` = empty, letter = that letter.
+- `lengths` — comma-separated word lengths, e.g. `"3,4,5,7"` or `[3,4,5,7]`
 
 **File upload:**
 ```bash
@@ -119,7 +154,7 @@ curl -X POST http://localhost:3232/api/solve \
 
 ### `POST /api/detect`
 
-Upload an image to detect walls only (no OCR — you fill letters in the UI):
+Upload an image to detect walls (no OCR — you fill letters in the UI):
 
 ```bash
 curl -X POST http://localhost:3232/api/detect \
@@ -137,21 +172,14 @@ curl http://localhost:3232/api/health
 {"status": "ok", "dict_loaded": true, "dict_size": 75213}
 ```
 
-## Solver Variants
+## What's NOT in this repo
 
-The core solver supports:
-- **Any grid size** (N×N) — not limited to 5×5
-- **Any number of words** — as long as they tile the grid exactly
-- **Any word lengths** — specify per puzzle
-- **Orthogonal paths** — no diagonals (matching Wend rules)
-- **Letter tiles only** — walls are impassable
+This project is **fully portable** — no machine-specific paths or configs.
+The following live **only on the original dev machine** and are not needed to run the app:
 
-## Future Ideas
-
-- [ ] **Grid generator** — given a word list, generate a Wend puzzle with a unique solution
-- [ ] **DLX backend** — Dancing Links for faster solving on larger grids (7×7+)
-- [ ] **Toolbox integration** — embed as a tool in the Toolbox web app
-- [ ] **Multi-color walls** — different wall types with different constraints
+- `~/wend-venv/` — virtual environment (create your own with `python -m venv .venv`)
+- `/etc/systemd/system/wend-solver.service` — systemd service (template in `_examples/`)
+- `tesseract-ocr` — optional, lazy-imported if installed
 
 ## License
 
